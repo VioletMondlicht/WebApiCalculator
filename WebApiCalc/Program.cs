@@ -1,8 +1,15 @@
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-app.MapGet("/calc", async (string op, double x, double y) =>
+
+app.MapGet("/calc", (HttpContext context) =>
 {
+    var op = context.Request.Query["op"];
+    if (!double.TryParse(context.Request.Query["x"], out double x) ||
+        !double.TryParse(context.Request.Query["y"], out double y))
+    {
+        return Results.BadRequest("Invalid parameters");
+    }
 
     double result;
     switch (op)
@@ -17,23 +24,21 @@ app.MapGet("/calc", async (string op, double x, double y) =>
             result = x * y;
             break;
         case "div":
-            if (y == 0) return "Division by 0 not allowed!";
-            else result = x / y;
+            if (y == 0) return Results.BadRequest("Dividing by 0 not allowed");
+            result = x / y;
             break;
         case "pow":
             result = Math.Pow(x, y);
             break;
         case "sqrt":
-            result = Math.Pow(y, (1 / x));
+            if (x < 0) return Results.BadRequest("Cannot calculate square root of negative number");
+            result = Math.Pow(x, 1 / y);
             break;
         default:
-            return "invalid selection";
+            return Results.BadRequest("Invalid selection");
     }
 
-    if (double.IsInfinity(result)) return "overflow";
-    else return $"{result}";
+    if (double.IsInfinity(result)) return Results.BadRequest("Overflow");
+    return Results.Ok(result);
 });
-
 app.Run();
-
-
